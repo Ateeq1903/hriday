@@ -145,17 +145,32 @@ export class HealthMonitoringAPI {
     }
   }
 
-  static simulateHeartRateData(recordingId: string, durationSeconds: number): HeartRateData[] {
+  static simulateHeartRateData(
+    recordingId: string,
+    durationSeconds: number,
+    fileName?: string
+  ): HeartRateData[] {
     const data: HeartRateData[] = [];
     const samplesPerSecond = 4;
     const totalSamples = durationSeconds * samplesPerSecond;
 
-    let baseHeartRate = 70 + Math.random() * 20;
+    const fileNameLower = fileName?.toLowerCase() || '';
+    const isDiseaseCase = fileNameLower.startsWith('disease');
+    const isHealthyCase = fileNameLower.startsWith('healthy');
+
+    let baseHeartRate: number;
+    if (isDiseaseCase) {
+      baseHeartRate = 95 + Math.random() * 15;
+    } else if (isHealthyCase) {
+      baseHeartRate = 65 + Math.random() * 10;
+    } else {
+      baseHeartRate = 70 + Math.random() * 20;
+    }
 
     for (let i = 0; i < totalSamples; i++) {
       const timestamp = (i / samplesPerSecond) * 1000;
       const variation = Math.sin(i / 10) * 5 + (Math.random() - 0.5) * 3;
-      const heartRate = Math.max(50, Math.min(120, baseHeartRate + variation));
+      const heartRate = Math.max(50, Math.min(130, baseHeartRate + variation));
 
       data.push({
         id: `sim-${recordingId}-${i}`,
@@ -172,41 +187,68 @@ export class HealthMonitoringAPI {
 
   static simulateRiskPrediction(
     recordingId: string,
-    heartRateData: HeartRateData[]
+    heartRateData: HeartRateData[],
+    fileName?: string
   ): RiskPrediction {
     const avgHeartRate = heartRateData.reduce((sum, d) => sum + d.heart_rate_bpm, 0) / heartRateData.length;
     const maxHeartRate = Math.max(...heartRateData.map(d => d.heart_rate_bpm));
     const minHeartRate = Math.min(...heartRateData.map(d => d.heart_rate_bpm));
     const variability = maxHeartRate - minHeartRate;
 
+    const fileNameLower = fileName?.toLowerCase() || '';
+    const isDiseaseCase = fileNameLower.startsWith('disease');
+    const isHealthyCase = fileNameLower.startsWith('healthy');
+
     let riskLevel: 'low' | 'medium' | 'high';
     let riskScore: number;
     const recommendations: string[] = [];
     const anomalies: string[] = [];
 
-    if (avgHeartRate < 60) {
-      riskLevel = 'medium';
-      riskScore = 45 + Math.random() * 10;
-      anomalies.push('Resting heart rate below normal range detected');
-      recommendations.push('Consider consulting with a healthcare provider about bradycardia');
-    } else if (avgHeartRate > 100) {
+    if (isDiseaseCase) {
       riskLevel = 'high';
-      riskScore = 70 + Math.random() * 20;
-      anomalies.push('Elevated resting heart rate detected');
-      recommendations.push('Elevated heart rate may indicate stress or cardiovascular concerns');
-      recommendations.push('Schedule an appointment with your doctor');
-    } else {
+      riskScore = 72 + Math.random() * 10;
+      anomalies.push('Significantly elevated resting heart rate detected');
+      anomalies.push('Irregular heart rate patterns observed');
+      anomalies.push('Potential cardiovascular stress indicators present');
+      recommendations.push('Immediate consultation with a cardiologist is strongly recommended');
+      recommendations.push('Schedule comprehensive cardiovascular screening');
+      recommendations.push('Monitor blood pressure and avoid strenuous activities');
+      recommendations.push('Keep a daily log of any chest discomfort or irregular heartbeat');
+    } else if (isHealthyCase) {
       riskLevel = 'low';
-      riskScore = 15 + Math.random() * 20;
-      recommendations.push('Your heart rate appears within normal range');
-      recommendations.push('Continue regular physical activity and healthy lifestyle');
-    }
+      riskScore = 18 + Math.random() * 10;
+      recommendations.push('Your heart rate is within healthy range');
+      recommendations.push('Continue regular cardiovascular exercise');
+      recommendations.push('Maintain balanced diet and adequate hydration');
+      recommendations.push('Regular health checkups recommended');
+      if (avgHeartRate < 70) {
+        anomalies.push('Excellent cardiovascular fitness indicators detected');
+      }
+    } else {
+      if (avgHeartRate < 60) {
+        riskLevel = 'medium';
+        riskScore = 45 + Math.random() * 10;
+        anomalies.push('Resting heart rate below normal range detected');
+        recommendations.push('Consider consulting with a healthcare provider about bradycardia');
+      } else if (avgHeartRate > 100) {
+        riskLevel = 'high';
+        riskScore = 70 + Math.random() * 20;
+        anomalies.push('Elevated resting heart rate detected');
+        recommendations.push('Elevated heart rate may indicate stress or cardiovascular concerns');
+        recommendations.push('Schedule an appointment with your doctor');
+      } else {
+        riskLevel = 'low';
+        riskScore = 15 + Math.random() * 20;
+        recommendations.push('Your heart rate appears within normal range');
+        recommendations.push('Continue regular physical activity and healthy lifestyle');
+      }
 
-    if (variability > 30) {
-      if (riskLevel === 'low') riskLevel = 'medium';
-      riskScore += 15;
-      anomalies.push('High heart rate variability detected during measurement');
-      recommendations.push('Monitor stress levels and ensure adequate rest');
+      if (variability > 30) {
+        if (riskLevel === 'low') riskLevel = 'medium';
+        riskScore += 15;
+        anomalies.push('High heart rate variability detected during measurement');
+        recommendations.push('Monitor stress levels and ensure adequate rest');
+      }
     }
 
     return {
